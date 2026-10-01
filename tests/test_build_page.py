@@ -96,22 +96,42 @@ def _groups_block(page: str) -> str:
     return unescape(block)
 
 
-def test_bands_replace_the_raw_numbers(snapshot):
-    """La decisione che regge la pagina: fasce fuori, numeri dentro stats.json."""
-    body = _body(build_page.render(snapshot))
-    block = _groups_block(body)
+def test_cards_show_how_many_members(snapshot):
+    """Ogni scheda dice quanti sono, arrotondato — e il gruppo senza numero lo dice."""
+    block = _groups_block(_body(build_page.render(snapshot)))
 
-    assert block.strip()
-    assert not any(char.isdigit() for char in block), "un numero di iscritti è finito in pagina"
-    for band in ("attivo", "in crescita", "piccolo", build_page.BAND_UNKNOWN):
-        assert band in block
-    # il conteggio esatto del gruppo principale non si pubblica: solo arrotondato
+    assert "~330" in block  # Lombardia, 336
+    assert "~80" in block  # Toscana, 85
+    assert "8" in block  # Valle d'Aosta, esatto perché sotto i 20
+    assert build_page.BAND_UNKNOWN in block  # Basilicata (0) e Piemonte (illeggibile)
+    for band in ("attivo", "in crescita", "piccolo"):
+        assert band not in block, f"la fascia {band} è rimasta in pagina"
+
+
+def test_exact_counts_are_not_published(snapshot):
+    """Un numero al dettaglio invecchia fra due `make page`: in pagina va arrotondato."""
+    body = _body(build_page.render(snapshot))
+    for exact in ("336", "2371", "2.371", "85"):
+        assert exact not in _groups_block(body), exact
     assert "2371" not in body
     assert "2.371" not in body
 
 
 def test_main_group_size_is_rounded_down(snapshot):
-    assert "oltre 2.300 persone" in build_page.render(snapshot)
+    html = build_page.render(snapshot)
+    assert "~2.300 persone" in html
+    # 336 + 85 + 8 + 0 + 15 gruppi a 42 = 1059 -> arrotondato alle centinaia
+    assert "~1.000" in html
+
+
+def test_badge_is_the_count_and_falls_back_to_a_label():
+    def badge(members):
+        return build_page.Group(region="X", handle="@x", members=members).badge
+
+    assert badge(336) == "~330"
+    assert badge(8) == "8"
+    assert badge(0) == build_page.BAND_UNKNOWN
+    assert badge(None) == build_page.BAND_UNKNOWN
 
 
 def test_band_thresholds():

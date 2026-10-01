@@ -94,6 +94,17 @@ class Group:
         return BAND_UNKNOWN
 
     @property
+    def badge(self) -> str:
+        """Quello che la scheda mostra: quanti sono, o che il gruppo è in avvio.
+
+        `band` resta, ma solo per `stats.json` e per smorzare la scheda di un
+        gruppo senza numero.
+        """
+        if self.members is None or self.members <= 0:
+            return BAND_UNKNOWN
+        return approx_members(self.members)
+
+    @property
     def display_title(self) -> str:
         return self.title or f"Soli {self.region}"
 
@@ -231,7 +242,7 @@ def render(snapshot: Snapshot) -> str:
           <a href="{escape(g.url)}">
             <span class="name">{escape(g.display_title)}</span>
             <span class="handle">{escape(g.handle)}</span>
-            <span class="band">{escape(g.band)}</span>
+            <span class="band" title="iscritti">{escape(g.badge)}</span>
           </a>
         </li>"""
         for g in groups
@@ -250,8 +261,9 @@ def render(snapshot: Snapshot) -> str:
 
     if snapshot.main_members:
         size = (
-            f"Siamo <strong>oltre {thousands(round_down(snapshot.main_members))} persone</strong>"
-            " nel gruppo principale, più i venti gruppi regionali."
+            f"Siamo <strong>{approx_members(snapshot.main_members)} persone</strong> nel gruppo"
+            f" principale, più <strong>{approx_members(snapshot.total_members)}</strong>"
+            " nei venti gruppi regionali."
         )
     else:
         size = (
