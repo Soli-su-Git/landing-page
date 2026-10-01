@@ -140,16 +140,6 @@ def test_main_group_size_is_rounded_down(snapshot):
     assert "~1.000" in html
 
 
-def test_badge_is_the_count_and_falls_back_to_a_label():
-    def badge(members):
-        return build_page.Group(region="X", handle="@x", members=members).badge
-
-    assert badge(336) == "~330"
-    assert badge(8) == "8"
-    assert badge(0) == build_page.BAND_UNKNOWN
-    assert badge(None) == build_page.BAND_UNKNOWN
-
-
 def test_band_thresholds():
     def band(members):
         return build_page.Group(region="X", handle="@x", members=members).band
@@ -305,3 +295,24 @@ def test_http_errors_are_not_retried(monkeypatch):
     with pytest.raises(build_page.urllib.error.HTTPError):
         build_page._fetch("https://example.invalid/x")
     assert len(calls) == 1
+
+
+def test_an_unreadable_group_claims_nothing(snapshot):
+    """Illeggibile non è vuoto: la scheda del Piemonte non porta nessun tondino."""
+    block = _groups_block(_body(build_page.render(snapshot)))
+    piemonte = block[block.index("solipiemonte") : block.index("solipuglia")]
+    assert 'class="count"' not in piemonte
+    assert build_page.BAND_UNKNOWN not in piemonte
+    # il gruppo davvero vuoto invece lo dice
+    basilicata = block[block.index("solibasilicata") : block.index("solicalabria")]
+    assert build_page.BAND_UNKNOWN in basilicata
+
+
+def test_badge_tells_the_three_cases_apart():
+    def badge(members, error=None):
+        return build_page.Group(region="X", handle="@x", members=members, error=error).badge
+
+    assert badge(336) == "~330"
+    assert badge(8) == "8"
+    assert badge(0) == build_page.BAND_UNKNOWN
+    assert badge(None, error="Forbidden: bot was kicked") == ""

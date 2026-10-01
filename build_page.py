@@ -120,12 +120,18 @@ class Group:
 
     @property
     def badge(self) -> str:
-        """Quello che la scheda mostra: quanti sono, o che il gruppo è in avvio.
+        """Quello che la scheda mostra: quanti sono, "in avvio", o niente.
 
-        `band` resta, ma solo per `stats.json` e per smorzare la scheda di un
-        gruppo senza numero.
+        Tre casi diversi, e vale la pena non confonderli: un numero se c'è, "in
+        avvio" se il gruppo è davvero vuoto, e **niente** se non si è riusciti a
+        leggerlo — un gruppo illeggibile non è un gruppo vuoto, e scriverlo
+        sarebbe dire una cosa che non si sa.
+
+        `band` resta, ma solo per `stats.json` e per smorzare la scheda.
         """
-        if self.members is None or self.members <= 0:
+        if self.members is None:
+            return ""
+        if self.members <= 0:
             return BAND_UNKNOWN
         return approx_members(self.members)
 
@@ -325,6 +331,13 @@ def active_topics() -> list[tuple[int, str]]:
     return sorted(topics, key=lambda item: item[1].lower())
 
 
+def _count(group: Group) -> str:
+    """Il tondino con il numero, o nulla se quel numero non si sa."""
+    if not group.badge:
+        return ""
+    return f'<span class="count" title="iscritti">{escape(group.badge)}</span>'
+
+
 def _avatar(group: Group) -> str:
     """La foto del gruppo, o un tondo con le iniziali se non c'è.
 
@@ -353,7 +366,7 @@ def render(snapshot: Snapshot) -> str:
             {_avatar(g)}
             <span class="name">{escape(g.display_title)}</span>
             <span class="handle">{escape(g.handle)}</span>
-            <span class="count" title="iscritti">{escape(g.badge)}</span>
+            {_count(g)}
           </a>
         </li>"""
         for g in groups
