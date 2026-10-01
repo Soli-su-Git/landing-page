@@ -19,6 +19,22 @@ from solizia.routing import FORUM_TOPICS, REGION_TO_HANDLE, topic_display_name
 SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "build_page.py"
 
 
+class _FakeResponse:
+    """Il minimo che serve a `with urllib.request.urlopen(...) as r: r.read()`."""
+
+    def __init__(self, data: bytes):
+        self._data = data
+
+    def read(self) -> bytes:
+        return self._data
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_exc):
+        return False
+
+
 def _load_module():
     spec = importlib.util.spec_from_file_location("build_page", SCRIPT)
     module = importlib.util.module_from_spec(spec)
@@ -245,3 +261,47 @@ def test_the_page_never_carries_the_bot_token(snapshot):
     html = build_page.render(snapshot)
     assert "/file/bot" not in html
     assert "api.telegram.org" not in html
+
+
+# -- errori di rete -------------------------------------------------------------
+
+
+def test_fetch_retries_network_errors(monkeypatch):
+    """Un reset non deve diventare un gruppo senza iscritti."""
+    calls = []
+
+    def flaky(url, timeout=0):
+        calls.append(url)
+        if len(calls) < 3:
+            raise OSError("connection reset by peer")
+        return _FakeResponse(b"ok")
+
+    monkeypatch.setattr(build_page.urllib.request, "urlopen", flaky)
+    monkeypatch.setattr(build_page.time, "sleep", lambda _s: None)
+    assert build_page._fetch("https://example.invalid/x") == b"ok"
+    assert len(calls) == 3
+
+
+def test_fetch_gives_up_after_the_attempts(monkeypatch):
+    monkeypatch.setattr(
+        build_page.urllib.request,
+        "urlopen",
+        lambda url, timeout=0: (_ for _ in ()).throw(OSError("giù")),
+    )
+    monkeypatch.setattr(build_page.time, "sleep", lambda _s: None)
+    with pytest.raises(OSError):
+        build_page._fetch("https://example.invalid/x")
+
+
+def test_http_errors_are_not_retried(monkeypatch):
+    """Un 403 è una risposta, non un incidente: ritentarlo non cambia niente."""
+    calls = []
+
+    def forbidden(url, timeout=0):
+        calls.append(url)
+        raise build_page.urllib.error.HTTPError(url, 403, "Forbidden", {}, None)
+
+    monkeypatch.setattr(build_page.urllib.request, "urlopen", forbidden)
+    with pytest.raises(build_page.urllib.error.HTTPError):
+        build_page._fetch("https://example.invalid/x")
+    assert len(calls) == 1

@@ -36,6 +36,7 @@ import json
 import os
 import re
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -61,6 +62,11 @@ TEMPLATE = "page_template.html"
 
 #: Dove finiscono le foto dei gruppi, dentro la cartella pubblicata.
 IMAGES_DIR = "img"
+
+#: Quante volte riprovare una chiamata caduta per motivi di rete, e quanto
+#: aspettare fra un tentativo e l'altro.
+ATTEMPTS = 3
+RETRY_WAIT_SEC = 1.0
 
 #: Lato dell'avatar in pagina: la foto "small" di Telegram è 160px, quindi
 #: resta nitida anche su uno schermo a tripla densità.
@@ -155,11 +161,31 @@ class Snapshot:
         return sum(g.members or 0 for g in self.groups)
 
 
+def _fetch(url: str, timeout: int = 15, attempts: int = ATTEMPTS) -> bytes:
+    """GET con qualche tentativo, perché un errore di rete qui mente in pagina.
+
+    Un "connection reset" su `getChatMemberCount` è bastato a far uscire la
+    Campania come gruppo senza iscritti: 76 persone diventate "in avvio" per un
+    pacchetto perso. Gli errori HTTP invece non si ritentano, sono risposte.
+    """
+    last: Exception | None = None
+    for attempt in range(attempts):
+        try:
+            with urllib.request.urlopen(url, timeout=timeout) as response:
+                return response.read()
+        except urllib.error.HTTPError:
+            raise
+        except Exception as error:  # rete assente, DNS, timeout, reset
+            last = error
+            if attempt + 1 < attempts:
+                time.sleep(RETRY_WAIT_SEC * (attempt + 1))
+    raise last if last else RuntimeError("fetch fallito senza errore")
+
+
 def _call(token: str, method: str, **params: str) -> dict:
     url = f"{API}/bot{token}/{method}?{urllib.parse.urlencode(params)}"
     try:
-        with urllib.request.urlopen(url, timeout=15) as response:
-            return json.load(response)
+        return json.loads(_fetch(url))
     except urllib.error.HTTPError as error:
         try:
             return json.load(error)
@@ -184,8 +210,7 @@ def _download_photo(token: str, file_id: str, destination: Path) -> bool:
         return False
     url = f"{API}/file/bot{token}/{path}"
     try:
-        with urllib.request.urlopen(url, timeout=30) as response:
-            data = response.read()
+        data = _fetch(url, timeout=30)
     except Exception:
         return False
     if not data:
