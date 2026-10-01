@@ -190,3 +190,17 @@ def test_approx_members_rounds_by_order_of_magnitude():
     assert build_page.approx_members(19) == "19"
     assert build_page.approx_members(8) == "8"
     assert build_page.approx_members(1) == "1"
+
+
+def test_page_version_comes_from_its_own_changelog(tmp_path):
+    """La pagina ha una versione sua: quella del bot non la riguarda."""
+    (tmp_path / "docs").mkdir()
+    (tmp_path / build_page.SITO_CHANGELOG).write_text(
+        "# Changelog della pagina\n\n## 2.1.0 — 2026-11-01\n\n- feat(sito): x\n"
+    )
+    assert build_page.page_version(tmp_path) == "2.1.0"
+
+
+def test_footer_carries_the_page_version(snapshot):
+    html = build_page.render(snapshot)
+    assert f"v{build_page.page_version()}," in html

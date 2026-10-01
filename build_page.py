@@ -40,7 +40,12 @@ from pathlib import Path
 from string import Template
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+# `changelog_version` dice dove sta la versione della pagina (il titolo della
+# sezione più recente del suo changelog): importarla evita di riscrivere qui
+# quella regola e di farla divergere.
+from bump_version import SITO_CHANGELOG, changelog_version
 from solizia.routing import FORUM_TOPICS, REGION_TO_HANDLE, topic_display_name
 
 API = "https://api.telegram.org"
@@ -223,6 +228,12 @@ def pretty_topic(topic_id: int) -> str:
     return topic_display_name(topic_id).title()
 
 
+def page_version(repo: Path | None = None) -> str:
+    """La versione della pagina, dal suo changelog. Non è quella del bot."""
+    root = repo or Path(__file__).resolve().parents[1]
+    return changelog_version(root / SITO_CHANGELOG)
+
+
 def active_topics() -> list[tuple[int, str]]:
     """I topic non commentati in `FORUM_TOPICS`, in ordine alfabetico."""
     topics = [(topic_id, pretty_topic(topic_id)) for topic_id in FORUM_TOPICS]
@@ -281,6 +292,7 @@ def render(snapshot: Snapshot) -> str:
         topics=topics,
         socials=socials,
         generated=escape(italian_date(snapshot.generated_on)),
+        version=escape(page_version()),
     )
 
 
