@@ -78,12 +78,16 @@ HERO_PX = 76
 #: Gruppo principale: è un forum pubblico, quindi i topic hanno un link vero.
 MAIN_GROUP = "solisutelegram"
 
-#: Dove sta la community fuori da Telegram.
-SOCIALS: list[tuple[str, str, str]] = [
-    ("Telegram", "Soli ☀️ — il gruppo principale", f"https://t.me/{MAIN_GROUP}"),
-    ("Instagram", "@solisuig", "https://instagram.com/solisuig"),
-    ("TikTok", "@solisutiktok", "https://tiktok.com/@solisutiktok"),
+#: Dove sta la community fuori da Telegram: rete, etichetta, link, icona.
+SOCIALS: list[tuple[str, str, str, str]] = [
+    ("Telegram", "Soli ☀️ — il gruppo principale", f"https://t.me/{MAIN_GROUP}", "telegram"),
+    ("Instagram", "@solisuig", "https://instagram.com/solisuig", "instagram"),
+    ("TikTok", "@solisutiktok", "https://tiktok.com/@solisutiktok", "tiktok"),
 ]
+
+#: Le icone dei social, accanto a questo script. Sono disegnate con
+#: `currentColor`, così seguono il tema chiaro/scuro invece di essere due file.
+ICONS_DIR = "icons"
 
 #: Soglia minima di iscritti -> fascia mostrata in pagina, dalla più alta.
 BANDS: list[tuple[int, str]] = [
@@ -347,6 +351,20 @@ def active_topics() -> list[tuple[int, str]]:
     return sorted(topics, key=lambda item: item[1].lower())
 
 
+def icon(name: str) -> str:
+    """L'SVG dell'icona, messo dentro la pagina.
+
+    Inline e non `<img src>` per due motivi: resta tutto in un file solo, e con
+    `currentColor` l'icona cambia colore con il tema senza averne due versioni.
+    """
+    path = Path(__file__).parent / ICONS_DIR / f"{name}.svg"
+    try:
+        markup = path.read_text(encoding="utf-8").strip()
+    except OSError:
+        return ""
+    return markup.replace("<svg ", '<svg class="icon" ', 1)
+
+
 def _count(group: Group) -> str:
     """Il tondino con il numero, o nulla se quel numero non si sa."""
     if not group.badge:
@@ -394,9 +412,10 @@ def render(snapshot: Snapshot) -> str:
     )
 
     socials = "\n".join(
-        f'          <li><a href="{escape(url)}"><strong>{escape(network)}</strong>'
-        f"<span>{escape(label)}</span></a></li>"
-        for network, label, url in SOCIALS
+        f'          <li><a href="{escape(url)}">{icon(glyph)}'
+        f'<span class="who"><strong>{escape(network)}</strong>'
+        f"<span>{escape(label)}</span></span></a></li>"
+        for network, label, url, glyph in SOCIALS
     )
 
     if snapshot.main_members:

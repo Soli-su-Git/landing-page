@@ -91,7 +91,7 @@ def test_topic_names_are_readable():
 
 def test_socials_are_linked(snapshot):
     html = build_page.render(snapshot)
-    for _network, _label, url in build_page.SOCIALS:
+    for _network, _label, url, _glyph in build_page.SOCIALS:
         assert url in html
     assert "instagram.com/solisuig" in html
     assert "tiktok.com/@solisutiktok" in html
@@ -329,3 +329,21 @@ def test_without_the_main_photo_the_header_still_stands(snapshot):
     body = _body(build_page.render(snapshot))
     assert "hero-photo" not in body
     assert "<h1>Soli" in body
+
+
+def test_every_social_carries_its_icon(snapshot):
+    body = _body(build_page.render(snapshot))
+    block = body[body.index('<ul class="socials">') :]
+    assert block.count('<svg class="icon"') == len(build_page.SOCIALS)
+    # disegnate con currentColor: seguono il tema invece di avere due versioni
+    assert "currentColor" in block
+    assert "<img" not in block[: block.index("</ul>")]
+
+
+@pytest.mark.parametrize("name", ["telegram", "instagram", "tiktok"])
+def test_the_icon_files_are_there(name):
+    assert build_page.icon(name).startswith('<svg class="icon"')
+
+
+def test_a_missing_icon_does_not_break_the_page():
+    assert build_page.icon("mastodon") == ""

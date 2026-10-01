@@ -91,12 +91,15 @@ ul { list-style: none; margin: 0; padding: 0; }
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
 }
 .socials a {
-  display: flex; flex-direction: column; gap: 2px; text-decoration: none;
+  display: flex; align-items: center; gap: 12px; text-decoration: none;
   background: var(--card); border: 1px solid var(--line); border-radius: 12px;
   padding: 12px 14px;
 }
 .socials a:hover { border-color: var(--accent); }
-.socials span { color: var(--muted); font-size: 0.9rem; }
+.socials .who { display: flex; flex-direction: column; gap: 2px; }
+.socials .who span { color: var(--muted); font-size: 0.9rem; }
+.icon { width: 24px; height: 24px; flex: none; color: var(--accent); }
+.socials a:hover .icon { color: var(--fg); }
 .note { color: var(--muted); font-size: 0.95rem; }
 footer {
   margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line);
