@@ -14,9 +14,8 @@ from pathlib import Path
 
 import pytest
 
-from solizia.routing import FORUM_TOPICS, REGION_TO_HANDLE, topic_display_name
-
-SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "build_page.py"
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPT = ROOT / "build_page.py"
 
 
 class _FakeResponse:
@@ -44,6 +43,10 @@ def _load_module():
 
 
 build_page = _load_module()
+
+# le tabelle arrivano dal repo del bot, non più da un import
+REGION_TO_HANDLE = build_page.regions()
+TOPICS = {topic["id"]: topic["nome"] for topic in build_page.routing()["topic"]}
 
 
 @pytest.fixture
@@ -75,18 +78,16 @@ def test_every_region_is_on_the_page(snapshot):
 
 def test_every_active_topic_is_linked(snapshot):
     html = build_page.render(snapshot)
-    for topic_id in FORUM_TOPICS:
+    for topic_id, name in TOPICS.items():
         assert f"https://t.me/{build_page.MAIN_GROUP}/{topic_id}" in html
-        assert build_page.pretty_topic(topic_id) in html
+        assert build_page.pretty_topic(name) in html
 
 
 def test_topic_names_are_readable():
     """ "C2c" e "Dr. martens day" vanno bene in una scheda admin, non in pagina."""
-    assert build_page.pretty_topic(39829) == "C2C"
-    assert build_page.pretty_topic(43552) == "Dr. Martens Day"
-    assert build_page.pretty_topic(75056) == "I Cani"
-    # il nome che usa il bot non cambia
-    assert topic_display_name(39829) == "C2c"
+    assert build_page.pretty_topic("C2c") == "C2C"
+    assert build_page.pretty_topic("Dr. martens day") == "Dr. Martens Day"
+    assert build_page.pretty_topic("I cani") == "I Cani"
 
 
 def test_socials_are_linked(snapshot):
@@ -198,13 +199,14 @@ def test_approx_members_rounds_by_order_of_magnitude():
     assert build_page.approx_members(1) == "1"
 
 
-def test_page_version_comes_from_its_own_changelog(tmp_path):
-    """La pagina ha una versione sua: quella del bot non la riguarda."""
-    (tmp_path / "docs").mkdir()
-    (tmp_path / build_page.SITO_CHANGELOG).write_text(
-        "# Changelog della pagina\n\n## 2.1.0 — 2026-11-01\n\n- feat(sito): x\n"
-    )
-    assert build_page.page_version(tmp_path) == "2.1.0"
+def test_page_version_comes_from_the_changelog(tmp_path):
+    changelog = tmp_path / "CHANGELOG.md"
+    changelog.write_text("# Changelog della pagina\n\n## 2.1.0 — 2026-11-01\n\n- feat: x\n")
+    assert build_page.page_version(changelog) == "2.1.0"
+
+
+def test_page_version_without_a_changelog(tmp_path):
+    assert build_page.page_version(tmp_path / "manca.md") == "0.0.0"
 
 
 def test_footer_carries_the_page_version(snapshot):
@@ -347,3 +349,19 @@ def test_the_icon_files_are_there(name):
 
 def test_a_missing_icon_does_not_break_the_page():
     assert build_page.icon("mastodon") == ""
+
+
+# -- le tabelle che arrivano dal repo del bot -----------------------------------
+
+
+def test_routing_json_has_every_region_and_topic():
+    data = build_page.routing()
+    assert len(data["regioni"]) == 20
+    assert data["topic"], "nessun topic: il file è vuoto o di un'altra forma"
+    assert all(topic["id"] and topic["nome"] for topic in data["topic"])
+
+
+def test_a_missing_routing_file_says_what_to_do(tmp_path):
+    with pytest.raises(SystemExit) as caduta:
+        build_page.routing(tmp_path / "manca.json")
+    assert "make routing" in str(caduta.value)

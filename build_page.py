@@ -1,29 +1,34 @@
 #!/usr/bin/env python3
-"""Genera la pagina pubblica della community: `docs/site/index.html`.
+"""Genera la pagina pubblica della community: `site/index.html`.
 
 I dati non si scrivono a mano: i gruppi regionali e i topic vengono da
-`src/solizia/routing.py`, titoli e numero di iscritti da Telegram. Quindi
-aggiungere un gruppo alla pagina vuol dire aggiungere una riga a
-`REGION_TO_HANDLE`, non toccare l'HTML.
+`data/routing.json`, titoli e numero di iscritti da Telegram. Quindi aggiungere
+un gruppo alla pagina vuol dire aggiungere una riga a `REGION_TO_HANDLE` nel
+repo del bot, non toccare l'HTML di qua.
 
+`data/routing.json` è una **copia**: la fonte è `public/routing.json` nel repo
+del bot, che la CI riscarica a ogni build. La copia committata serve solo
+perché la pagina si costruisca lo stesso quando quel repo non è raggiungibile
+(token scaduto, GitHub giù): meglio una pagina con i gruppi di ieri che nessuna
+pagina.
+
+    make routing           # riscarica le tabelle dal repo del bot
     make page              # con i dati freschi da Telegram (serve BOT_TOKEN)
-    make page-offline      # solo le tabelle del repo, senza numeri
+    make page-offline      # solo le tabelle locali, senza numeri
 
 Due file in uscita, e la differenza conta:
 
-- `docs/site/index.html` — la pagina pubblica. Mostra una **fascia**
-  ("attivo", "in crescita", ...), non il numero: "8 iscritti" accanto alla
-  Valle d'Aosta scoraggia dall'entrare proprio nei gruppi che hanno più
-  bisogno di gente.
-- `docs/stats.json` — i numeri veri, per chi guida la community. Sta **fuori**
-  da `docs/site/`, che è l'unica cartella pubblicata: se finisse lì dentro
-  renderebbe pubblici i numeri che la pagina nasconde.
+- `site/index.html` — la pagina pubblica, con accanto a ogni gruppo quanti
+  iscritti ha, arrotondato.
+- `stats.json` — i numeri per intero, per chi guida la community. Sta **fuori**
+  da `site/`, che è l'unica cartella pubblicata: lì dentro verrebbero pubblicati
+  anche gli errori per gruppo.
 
 `getChat` e `getChatMemberCount` funzionano sui gruppi pubblici anche se il bot
 non è dentro — ma non se è stato bannato: in quel caso il gruppo resta in
-pagina senza numero, e `docs/stats.json` ne registra il motivo.
+pagina senza numero, e `stats.json` ne registra il motivo.
 
-Le foto dei gruppi vengono scaricate in `docs/site/img/` e referenziate con un
+Le foto dei gruppi vengono scaricate in `site/img/` e referenziate con un
 percorso relativo. **Non si può linkare direttamente il file su Telegram**:
 l'indirizzo di scarico contiene il token del bot, che in una pagina pubblica
 sarebbe come pubblicare la password.
@@ -46,16 +51,15 @@ from html import escape
 from pathlib import Path
 from string import Template
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-# `changelog_version` dice dove sta la versione della pagina (il titolo della
-# sezione più recente del suo changelog): importarla evita di riscrivere qui
-# quella regola e di farla divergere.
-from bump_version import SITO_CHANGELOG, changelog_version
-from solizia.routing import FORUM_TOPICS, REGION_TO_HANDLE, topic_display_name
+ROOT = Path(__file__).resolve().parent
 
 API = "https://api.telegram.org"
+
+#: Le tabelle dei gruppi e dei topic, copia di `public/routing.json` del bot.
+ROUTING = ROOT / "data" / "routing.json"
+
+#: Il changelog di questa pagina: il titolo più recente è la sua versione.
+CHANGELOG = ROOT / "CHANGELOG.md"
 
 #: Il guscio HTML della pagina, accanto a questo script.
 TEMPLATE = "page_template.html"
@@ -237,7 +241,7 @@ def _download_photo(token: str, file_id: str, destination: Path) -> bool:
 def fetch_snapshot(token: str, images_dir: Path | None = None) -> Snapshot:
     """Interroga Telegram gruppo per gruppo. Un errore non ferma gli altri."""
     groups = []
-    for region, handle in REGION_TO_HANDLE.items():
+    for region, handle in regions().items():
         group = Group(region=region, handle=handle)
         chat = _call(token, "getChat", chat_id=handle)
         if chat.get("ok"):
@@ -274,8 +278,8 @@ def fetch_snapshot(token: str, images_dir: Path | None = None) -> Snapshot:
 
 
 def offline_snapshot() -> Snapshot:
-    """Le sole tabelle del repo: la pagina si costruisce anche senza token."""
-    return Snapshot(groups=[Group(region=r, handle=h) for r, h in REGION_TO_HANDLE.items()])
+    """Le sole tabelle locali: la pagina si costruisce anche senza token."""
+    return Snapshot(groups=[Group(region=r, handle=h) for r, h in regions().items()])
 
 
 def thousands(value: int) -> str:
@@ -329,25 +333,47 @@ def italian_date(iso: str) -> str:
     return f"{day} {MONTHS[month - 1]} {year}"
 
 
-def pretty_topic(topic_id: int) -> str:
+def pretty_topic(name: str) -> str:
     """Il nome del topic come lo legge una persona.
 
-    `topic_display_name` capitalizza la prima keyword e basta — "c2c" diventa
+    Il bot lo esporta capitalizzando la prima keyword e basta — "c2c" diventa
     "C2c", "dr. martens day" diventa "Dr. martens day". In una scheda agli admin
     va bene, su una pagina pubblica no.
     """
-    return topic_display_name(topic_id).title()
+    return name.title()
 
 
-def page_version(repo: Path | None = None) -> str:
-    """La versione della pagina, dal suo changelog. Non è quella del bot."""
-    root = repo or Path(__file__).resolve().parents[1]
-    return changelog_version(root / SITO_CHANGELOG)
+_HEADING = re.compile(r"^## (\d+\.\d+\.\d+)", re.MULTILINE)
 
 
-def active_topics() -> list[tuple[int, str]]:
-    """I topic non commentati in `FORUM_TOPICS`, in ordine alfabetico."""
-    topics = [(topic_id, pretty_topic(topic_id)) for topic_id in FORUM_TOPICS]
+def page_version(changelog: Path | None = None) -> str:
+    """La versione della pagina: il titolo della sezione più recente del changelog."""
+    try:
+        text = (changelog or CHANGELOG).read_text(encoding="utf-8")
+    except OSError:
+        return "0.0.0"
+    match = _HEADING.search(text)
+    return match.group(1) if match else "0.0.0"
+
+
+def routing(path: Path | None = None) -> dict:
+    """Le tabelle dei gruppi e dei topic, dal JSON pubblicato dal bot."""
+    try:
+        return json.loads((path or ROUTING).read_text(encoding="utf-8"))
+    except OSError as error:
+        raise SystemExit(
+            f"manca {path or ROUTING}: lancia `make routing` per riscaricarlo dal repo del bot"
+        ) from error
+
+
+def regions(path: Path | None = None) -> dict[str, str]:
+    """Regione -> handle del gruppo, in ordine."""
+    return dict(sorted(routing(path)["regioni"].items()))
+
+
+def active_topics(path: Path | None = None) -> list[tuple[int, str]]:
+    """I topic pubblicati dal bot, in ordine alfabetico."""
+    topics = [(topic["id"], pretty_topic(topic["nome"])) for topic in routing(path)["topic"]]
     return sorted(topics, key=lambda item: item[1].lower())
 
 
@@ -357,7 +383,7 @@ def icon(name: str) -> str:
     Inline e non `<img src>` per due motivi: resta tutto in un file solo, e con
     `currentColor` l'icona cambia colore con il tema senza averne due versioni.
     """
-    path = Path(__file__).parent / ICONS_DIR / f"{name}.svg"
+    path = ROOT / ICONS_DIR / f"{name}.svg"
     try:
         markup = path.read_text(encoding="utf-8").strip()
     except OSError:
@@ -437,7 +463,7 @@ def render(snapshot: Snapshot) -> str:
             f' alt="" width="{HERO_PX}" height="{HERO_PX}">'
         )
 
-    template = Template((Path(__file__).parent / TEMPLATE).read_text(encoding="utf-8"))
+    template = Template((ROOT / TEMPLATE).read_text(encoding="utf-8"))
     return template.substitute(
         hero=hero,
         title=escape(TITLE),
@@ -480,8 +506,8 @@ def main(argv: list[str] | None = None) -> int:
         action="store_true",
         help="non interrogare Telegram: pagina senza numeri né fasce reali",
     )
-    parser.add_argument("--output", type=Path, default=Path("docs/site/index.html"))
-    parser.add_argument("--stats", type=Path, default=Path("docs/stats.json"))
+    parser.add_argument("--output", type=Path, default=Path("site/index.html"))
+    parser.add_argument("--stats", type=Path, default=Path("stats.json"))
     args = parser.parse_args(argv)
 
     if args.offline:

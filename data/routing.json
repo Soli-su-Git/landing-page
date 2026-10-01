@@ -1,0 +1,114 @@
+{
+  "regioni": {
+    "Abruzzo": "@soliabruzzo",
+    "Basilicata": "@solibasilicata",
+    "Calabria": "@solicalabria",
+    "Campania": "@solicampania",
+    "Emilia-Romagna": "@soliemiliaromagna",
+    "Friuli Venezia Giulia": "@solifriuliveneziagiulia",
+    "Lazio": "@solilazio",
+    "Liguria": "@soliliguria",
+    "Lombardia": "@solilombardia",
+    "Marche": "@solimarche",
+    "Molise": "@solimolise",
+    "Piemonte": "@solipiemonte",
+    "Puglia": "@solipuglia",
+    "Sardegna": "@solisardegna",
+    "Sicilia": "@solisicilia",
+    "Toscana": "@solitoscana",
+    "Trentino-Alto Adige": "@solitrentino",
+    "Umbria": "@soliumbria",
+    "Valle d'Aosta": "@solivalledaosta",
+    "Veneto": "@soliveneto"
+  },
+  "topic": [
+    {
+      "id": 25960,
+      "nome": "Poplar festival"
+    },
+    {
+      "id": 25961,
+      "nome": "Spring attitude"
+    },
+    {
+      "id": 26307,
+      "nome": "Sziget festival"
+    },
+    {
+      "id": 26311,
+      "nome": "Les nuits de la bomba"
+    },
+    {
+      "id": 26427,
+      "nome": "Superaurora"
+    },
+    {
+      "id": 26429,
+      "nome": "Woodoo festival"
+    },
+    {
+      "id": 27332,
+      "nome": "Diluvio festival"
+    },
+    {
+      "id": 32438,
+      "nome": "Colorfest"
+    },
+    {
+      "id": 34588,
+      "nome": "Nessun dorma"
+    },
+    {
+      "id": 39829,
+      "nome": "C2c"
+    },
+    {
+      "id": 42370,
+      "nome": "Indieponente"
+    },
+    {
+      "id": 43552,
+      "nome": "Dr. martens day"
+    },
+    {
+      "id": 52790,
+      "nome": "Primavera"
+    },
+    {
+      "id": 55964,
+      "nome": "Sanremo"
+    },
+    {
+      "id": 68385,
+      "nome": "Miami festival"
+    },
+    {
+      "id": 75056,
+      "nome": "I cani"
+    },
+    {
+      "id": 78382,
+      "nome": "Flower festival"
+    },
+    {
+      "id": 92735,
+      "nome": "Paloma festival"
+    },
+    {
+      "id": 95463,
+      "nome": "Sherwood"
+    },
+    {
+      "id": 108537,
+      "nome": "Transumare fest"
+    },
+    {
+      "id": 127191,
+      "nome": "Rock en seine"
+    },
+    {
+      "id": 127197,
+      "nome": "La prima estate"
+    }
+  ]
+}

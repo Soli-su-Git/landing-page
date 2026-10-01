@@ -1,0 +1,21 @@
+# Qui non si pubblica nessun pacchetto: il file serve solo a ruff e pytest.
+# La versione della pagina non sta qui, sta nel titolo più recente di
+# CHANGELOG.md — vedi bump.py.
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM", "RUF"]
+ignore = [
+    "RUF001", # caratteri unicode "ambigui": i testi sono in italiano con emoji
+    "RUF002",
+    "RUF003",
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

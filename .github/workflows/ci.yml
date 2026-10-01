@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+      - run: pip install "pytest>=8.2,<9.0" "ruff>=0.6,<0.7"
+      - run: ruff check .
+      - run: ruff format --check .
+      - run: pytest
+      # la pagina dev'essere costruibile senza rete e senza segreti
+      - run: python build_page.py --offline --output /tmp/site/index.html

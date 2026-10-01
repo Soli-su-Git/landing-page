@@ -1,0 +1,12 @@
+# La pagina è generata: la costruisce `make page` in locale e la CI a ogni
+# push, che la pubblica su GitHub Pages. Nel repo stanno le sorgenti.
+site/
+stats.json
+
+# Ambiente
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.DS_Store

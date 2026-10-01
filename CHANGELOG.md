@@ -1,14 +1,19 @@
-# Changelog della pagina pubblica
+# Changelog della pagina
 
-La versione di [`site/index.html`](site/index.html), che **non** è quella del
-bot: la pagina e il bot cambiano per motivi diversi, quindi hanno due numeri
-separati (il bot sta in `pyproject.toml` + [`../CHANGELOG.md`](../CHANGELOG.md)).
-Il titolo della sezione più recente, qui sotto, *è* la versione della pagina:
-la legge `build_page.py` per scriverla nel footer.
+La versione di questa pagina, che **non** è quella del bot: stanno in due repo
+e cambiano per motivi diversi. Il titolo della sezione più recente, qui sotto,
+*è* la versione: la legge `build_page.py` per scriverla nel footer.
 
 Una riga per commit, dalla versione più recente. La aggiorna
-`make bump-sito MESSAGE="feat(sito): ..."`, che guarda solo gli oggetti con
-l'ambito `(sito)`.
+`make bump MESSAGE="feat: ..."`.
+
+Le voci fino alla 1.3.2 portano l'ambito `(sito)`: allora la pagina stava
+insieme al bot, nello stesso repo, e quell'ambito serviva a tenere separate le
+due versioni.
+
+## 2.0.0 — 2026-10-01
+
+- feat!: la pagina vive in un repo suo
 
 ## 1.3.2 — 2026-10-01
 
