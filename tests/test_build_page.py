@@ -157,3 +157,16 @@ def test_rounding():
     assert build_page.round_down(1406) == 1400
     assert build_page.round_down(42) == 0
     assert build_page.thousands(2300) == "2.300"
+
+
+def test_approx_members_rounds_by_order_of_magnitude():
+    """Grandi arrotondati, piccoli esatti: "~0" direbbe meno di "8"."""
+    assert build_page.approx_members(2372) == "~2.300"
+    assert build_page.approx_members(1581) == "~1.500"
+    assert build_page.approx_members(336) == "~330"
+    assert build_page.approx_members(174) == "~170"
+    assert build_page.approx_members(46) == "~40"
+    assert build_page.approx_members(20) == "~20"
+    assert build_page.approx_members(19) == "19"
+    assert build_page.approx_members(8) == "8"
+    assert build_page.approx_members(1) == "1"

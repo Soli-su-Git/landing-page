@@ -151,13 +151,33 @@ def offline_snapshot() -> Snapshot:
     return Snapshot(groups=[Group(region=r, handle=h) for r, h in REGION_TO_HANDLE.items()])
 
 
+def thousands(value: int) -> str:
+    return f"{value:,}".replace(",", ".")
+
+
 def round_down(value: int, step: int = 100) -> int:
     """Arrotonda per difetto: "oltre 2.300" non invecchia come "2.371"."""
     return value // step * step
 
 
-def thousands(value: int) -> str:
-    return f"{value:,}".replace(",", ".")
+def approx_members(value: int) -> str:
+    """Quanti sono, arrotondato per difetto a seconda dell'ordine di grandezza.
+
+    Un numero esatto invecchia fra una rigenerazione e l'altra (il gruppo
+    principale ha fatto +1 fra due `make page` di prova), quindi si arrotonda —
+    ma solo dove c'è qualcosa da arrotondare: sotto i 20 iscritti un "~0" o un
+    "~10" direbbe meno del numero vero.
+
+        2372 -> "~2.300"    336 -> "~330"    46 -> "~40"    8 -> "8"
+    """
+    if value >= 1000:
+        step = 100
+    elif value >= 20:
+        step = 10
+    else:
+        step = 1
+    rounded = round_down(value, step)
+    return thousands(rounded) if step == 1 else f"~{thousands(rounded)}"
 
 
 MONTHS = (
