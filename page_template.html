@@ -40,8 +40,13 @@ ul { list-style: none; margin: 0; padding: 0; }
 .groups {
   display: grid; gap: 10px;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  /* tutte le righe alte uguali: senza questo una scheda con il nome su due
+     righe ("Soli Friuli Venezia Giulia") è più alta delle sue vicine */
+  grid-auto-rows: 1fr;
 }
+.group { display: flex; }
 .group a {
+  flex: 1;  /* la scheda riempie la cella, che le righe hanno già pareggiato */
   display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: baseline;
   background: var(--card); border: 1px solid var(--line); border-radius: 12px;
   padding: 12px 14px; text-decoration: none;
