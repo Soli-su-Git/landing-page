@@ -316,3 +316,16 @@ def test_badge_tells_the_three_cases_apart():
     assert badge(8) == "8"
     assert badge(0) == build_page.BAND_UNKNOWN
     assert badge(None, error="Forbidden: bot was kicked") == ""
+
+
+def test_the_main_group_photo_is_at_the_top(snapshot):
+    snapshot.main_image = "img/solisutelegram.jpg"
+    html = build_page.render(snapshot)
+    assert '<img class="hero-photo" src="img/solisutelegram.jpg"' in html
+
+
+def test_without_the_main_photo_the_header_still_stands(snapshot):
+    assert snapshot.main_image is None
+    body = _body(build_page.render(snapshot))
+    assert "hero-photo" not in body
+    assert "<h1>Soli" in body

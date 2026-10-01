@@ -10,6 +10,10 @@ Una riga per commit, dalla versione più recente. La aggiorna
 `make bump-sito MESSAGE="feat(sito): ..."`, che guarda solo gli oggetti con
 l'ambito `(sito)`.
 
+## 1.2.0 — 2026-10-01
+
+- feat(sito): la foto del gruppo principale in cima alla pagina
+
 ## 1.1.2 — 2026-10-01
 
 - fix(sito): un gruppo illeggibile non si dichiara vuoto

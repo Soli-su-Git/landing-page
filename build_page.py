@@ -72,6 +72,9 @@ RETRY_WAIT_SEC = 1.0
 #: resta nitida anche su uno schermo a tripla densità.
 AVATAR_PX = 44
 
+#: Lato della foto del gruppo principale, in cima alla pagina.
+HERO_PX = 76
+
 #: Gruppo principale: è un forum pubblico, quindi i topic hanno un link vero.
 MAIN_GROUP = "solisutelegram"
 
@@ -160,6 +163,7 @@ class Snapshot:
 
     groups: list[Group]
     main_members: int | None = None
+    main_image: str | None = None
     generated_on: str = field(default_factory=lambda: date.today().isoformat())
 
     @property
@@ -249,8 +253,20 @@ def fetch_snapshot(token: str, images_dir: Path | None = None) -> Snapshot:
             group.error = str(chat.get("description"))
         groups.append(group)
 
-    main = _call(token, "getChatMemberCount", chat_id=f"@{MAIN_GROUP}")
-    return Snapshot(groups=groups, main_members=int(main["result"]) if main.get("ok") else None)
+    count = _call(token, "getChatMemberCount", chat_id=f"@{MAIN_GROUP}")
+    main_chat = _call(token, "getChat", chat_id=f"@{MAIN_GROUP}")
+    main_image = None
+    file_id = ((main_chat.get("result") or {}).get("photo") or {}).get("small_file_id")
+    if images_dir is not None and file_id:
+        name = f"{MAIN_GROUP}.jpg"
+        if _download_photo(token, file_id, images_dir / name):
+            main_image = f"{IMAGES_DIR}/{name}"
+
+    return Snapshot(
+        groups=groups,
+        main_members=int(count["result"]) if count.get("ok") else None,
+        main_image=main_image,
+    )
 
 
 def offline_snapshot() -> Snapshot:
@@ -395,8 +411,16 @@ def render(snapshot: Snapshot) -> str:
             "i gruppi regionali la dividono per zona."
         )
 
+    hero = ""
+    if snapshot.main_image:
+        hero = (
+            f'<img class="hero-photo" src="{escape(snapshot.main_image)}"'
+            f' alt="" width="{HERO_PX}" height="{HERO_PX}">'
+        )
+
     template = Template((Path(__file__).parent / TEMPLATE).read_text(encoding="utf-8"))
     return template.substitute(
+        hero=hero,
         title=escape(TITLE),
         tagline=escape(TAGLINE),
         main_url=f"https://t.me/{MAIN_GROUP}",

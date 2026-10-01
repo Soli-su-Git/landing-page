@@ -25,7 +25,13 @@ body {
 .wrap { max-width: 760px; margin: 0 auto; padding: 48px 20px 72px; }
 h1 {
   font-size: clamp(2rem, 7vw, 3rem); line-height: 1.1;
-  margin: 0 0 12px; letter-spacing: -0.02em;
+  margin: 0; letter-spacing: -0.02em;
+}
+.hero { display: flex; align-items: center; gap: 16px; margin-bottom: 12px; }
+.hero-photo {
+  width: 76px; height: 76px; flex: none;
+  border-radius: 50%; object-fit: cover;
+  background: var(--accent-soft); border: 1px solid var(--line);
 }
 h2 { font-size: 1.25rem; margin: 48px 0 8px; }
 p { margin: 0 0 16px; }
@@ -101,7 +107,10 @@ footer {
 <body>
 <div class="wrap">
   <header>
-    <h1>Soli ☀️</h1>
+    <div class="hero">
+      $hero
+      <h1>Soli ☀️</h1>
+    </div>
     <p class="tagline">$tagline</p>
     <p><a class="cta" href="$main_url">Entra nel gruppo principale</a></p>
   </header>
