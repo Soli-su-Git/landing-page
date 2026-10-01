@@ -242,7 +242,7 @@ def render(snapshot: Snapshot) -> str:
           <a href="{escape(g.url)}">
             <span class="name">{escape(g.display_title)}</span>
             <span class="handle">{escape(g.handle)}</span>
-            <span class="band" title="iscritti">{escape(g.badge)}</span>
+            <span class="count" title="iscritti">{escape(g.badge)}</span>
           </a>
         </li>"""
         for g in groups
