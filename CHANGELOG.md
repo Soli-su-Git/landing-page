@@ -10,6 +10,10 @@ Una riga per commit, dalla versione più recente. La aggiorna
 `make bump-sito MESSAGE="feat(sito): ..."`, che guarda solo gli oggetti con
 l'ambito `(sito)`.
 
+## 1.3.1 — 2026-10-01
+
+- ci(sito): la pagina si pubblica da sola su GitHub Pages
+
 ## 1.3.0 — 2026-10-01
 
 - feat(sito): le icone dei social accanto ai link

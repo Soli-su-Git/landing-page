@@ -1,0 +1,75 @@
+name: Pagina
+
+# Costruisce la pagina pubblica e la pubblica su GitHub Pages.
+#
+# Niente di generato sta nel repo: `docs/site/` nasce qui a ogni giro, dalle
+# tabelle di `routing.py` e da quello che Telegram risponde in quel momento.
+#
+# Serve il segreto BOT_TOKEN (Settings → Secrets and variables → Actions) per
+# leggere iscritti e foto dei gruppi. Senza, la pagina esce lo stesso ma senza
+# numeri né foto, invece di far fallire il giro.
+#
+# Di proposito **non** gira sulle pull request: una PR aperta da un fork non
+# riceve i segreti, ma una aperta da un branch di questo repo sì, e chi la apre
+# potrebbe farsi stampare il token. Qui si va solo su main.
+
+on:
+  push:
+    branches: [main]
+  # i numeri cambiano da soli anche quando nessuno committa
+  schedule:
+    - cron: "17 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# un deploy alla volta, e quello in corso si lascia finire
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      # build_page.py usa solo la libreria standard: niente da installare
+      - name: Genera la pagina
+        env:
+          BOT_TOKEN: ${{ secrets.BOT_TOKEN }}
+        run: |
+          if [ -n "$BOT_TOKEN" ]; then
+            python scripts/build_page.py
+          else
+            echo "::warning::BOT_TOKEN non configurato: pagina senza numeri né foto"
+            python scripts/build_page.py --offline
+          fi
+
+      - name: Controlla che il token non sia finito in pagina
+        run: |
+          if grep -q "api.telegram.org/file/bot" docs/site/index.html; then
+            echo "::error::la pagina contiene un indirizzo di scarico con il token"
+            exit 1
+          fi
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs/site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
