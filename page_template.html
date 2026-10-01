@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>$title</title>
+<meta name="description" content="$tagline">
+<style>
+:root {
+  --bg: #fffdf8; --fg: #1d1b16; --muted: #6b6558; --line: #e7e0d2;
+  --card: #ffffff; --accent: #d98324; --accent-soft: #fdf1e2;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14130f; --fg: #f3efe6; --muted: #a39c8c; --line: #2c2a23;
+    --card: #1c1a15; --accent: #f0a94c; --accent-soft: #2a2117;
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: var(--bg); color: var(--fg);
+  font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+.wrap { max-width: 760px; margin: 0 auto; padding: 48px 20px 72px; }
+h1 {
+  font-size: clamp(2rem, 7vw, 3rem); line-height: 1.1;
+  margin: 0 0 12px; letter-spacing: -0.02em;
+}
+h2 { font-size: 1.25rem; margin: 48px 0 8px; }
+p { margin: 0 0 16px; }
+.tagline { font-size: 1.15rem; color: var(--muted); margin-bottom: 28px; }
+a { color: inherit; }
+.cta {
+  display: inline-block; background: var(--accent); color: #1d1b16;
+  padding: 12px 22px; border-radius: 999px; font-weight: 600; text-decoration: none;
+}
+.cta:hover { filter: brightness(1.05); }
+ul { list-style: none; margin: 0; padding: 0; }
+.groups {
+  display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.group a {
+  display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; align-items: baseline;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  padding: 12px 14px; text-decoration: none;
+}
+.group a:hover { border-color: var(--accent); }
+.group .name { font-weight: 600; }
+.group .handle { grid-column: 1; color: var(--muted); font-size: 0.85rem; }
+.group .band {
+  grid-row: 1 / span 2; align-self: center; white-space: nowrap;
+  background: var(--accent-soft); color: var(--muted);
+  border-radius: 999px; padding: 3px 10px; font-size: 0.75rem;
+}
+.group.unknown a { opacity: 0.72; }
+.topics { display: flex; flex-wrap: wrap; gap: 8px; }
+.topics a {
+  display: inline-block; border: 1px solid var(--line); border-radius: 999px;
+  padding: 5px 13px; font-size: 0.9rem; text-decoration: none; background: var(--card);
+}
+.topics a:hover { border-color: var(--accent); }
+.socials {
+  display: grid; gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+}
+.socials a {
+  display: flex; flex-direction: column; gap: 2px; text-decoration: none;
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+  padding: 12px 14px;
+}
+.socials a:hover { border-color: var(--accent); }
+.socials span { color: var(--muted); font-size: 0.9rem; }
+.note { color: var(--muted); font-size: 0.95rem; }
+footer {
+  margin-top: 56px; padding-top: 20px; border-top: 1px solid var(--line);
+  color: var(--muted); font-size: 0.9rem;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>Soli ☀️</h1>
+    <p class="tagline">$tagline</p>
+    <p><a class="cta" href="$main_url">Entra nel gruppo principale</a></p>
+  </header>
+
+  <section>
+    <h2>Chi siamo</h2>
+    <p>Siamo una community italiana nata su Telegram per chi va ai concerti, ai
+    festival e in giro da solo — e preferirebbe non andarci da solo. Si chiede un
+    passaggio, si cerca compagnia per una data, si divide una stanza, si scopre
+    chi altro sarà lì quella sera.</p>
+    <p>$size</p>
+  </section>
+
+  <section>
+    <h2>Come funziona</h2>
+    <p>Il <strong>gruppo principale</strong> è un forum diviso in topic: uno per
+    festival, uno per artista, più quelli di servizio. I <strong>gruppi
+    regionali</strong> servono per organizzarsi vicino a casa. Di solito si entra
+    in due posti: il gruppo principale e quello della propria regione.</p>
+    <p class="note">La fascia accanto a ogni gruppo dice quanto è popolato oggi,
+    non quanto vale: nei gruppi piccoli c'è più bisogno di gente che scriva per
+    prima.</p>
+  </section>
+
+  <section>
+    <h2>I gruppi regionali</h2>
+    <ul class="groups">
+$cards
+    </ul>
+  </section>
+
+  <section>
+    <h2>I topic del forum</h2>
+    <p class="note">Si aprono dentro il gruppo principale: per vederli bisogna
+    esserci dentro.</p>
+    <ul class="topics">
+$topics
+    </ul>
+  </section>
+
+  <section>
+    <h2>Dove ci trovi</h2>
+    <ul class="socials">
+$socials
+    </ul>
+  </section>
+
+  <footer>
+    <p>Pagina generata dai dati del bot
+    <a href="https://t.me/solizia_bot">@solizia_bot</a> — aggiornata al
+    $generated.</p>
+  </footer>
+</div>
+</body>
+</html>
