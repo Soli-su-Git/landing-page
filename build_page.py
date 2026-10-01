@@ -21,7 +21,12 @@ Due file in uscita, e la differenza conta:
 
 `getChat` e `getChatMemberCount` funzionano sui gruppi pubblici anche se il bot
 non è dentro — ma non se è stato bannato: in quel caso il gruppo resta in
-pagina senza fascia, e `docs/stats.json` ne registra il motivo.
+pagina senza numero, e `docs/stats.json` ne registra il motivo.
+
+Le foto dei gruppi vengono scaricate in `docs/site/img/` e referenziate con un
+percorso relativo. **Non si può linkare direttamente il file su Telegram**:
+l'indirizzo di scarico contiene il token del bot, che in una pagina pubblica
+sarebbe come pubblicare la password.
 """
 
 from __future__ import annotations
@@ -29,6 +34,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import sys
 import urllib.error
 import urllib.parse
@@ -52,6 +58,13 @@ API = "https://api.telegram.org"
 
 #: Il guscio HTML della pagina, accanto a questo script.
 TEMPLATE = "page_template.html"
+
+#: Dove finiscono le foto dei gruppi, dentro la cartella pubblicata.
+IMAGES_DIR = "img"
+
+#: Lato dell'avatar in pagina: la foto "small" di Telegram è 160px, quindi
+#: resta nitida anche su uno schermo a tripla densità.
+AVATAR_PX = 44
 
 #: Gruppo principale: è un forum pubblico, quindi i topic hanno un link vero.
 MAIN_GROUP = "solisutelegram"
@@ -84,6 +97,7 @@ class Group:
     title: str | None = None
     members: int | None = None
     error: str | None = None
+    image: str | None = None  # percorso relativo alla pagina, es. "img/soliabruzzo.jpg"
 
     @property
     def url(self) -> str:
@@ -113,6 +127,20 @@ class Group:
     def display_title(self) -> str:
         return self.title or f"Soli {self.region}"
 
+    @property
+    def initials(self) -> str:
+        """Le iniziali, per il tondo al posto della foto quando non c'è.
+
+        "Emilia-Romagna" -> "ER", "Valle d'Aosta" -> "VA" (le parole di una
+        lettera sola non contano), "Abruzzo" -> "A".
+        """
+        words = [w for w in re.split(r"[^\w]+", self.region, flags=re.UNICODE) if len(w) > 1]
+        return "".join(word[0] for word in words[:2]).upper()
+
+    @property
+    def slug(self) -> str:
+        return self.handle.lstrip("@").lower()
+
 
 @dataclass
 class Snapshot:
@@ -141,7 +169,33 @@ def _call(token: str, method: str, **params: str) -> dict:
         return {"ok": False, "description": f"{type(error).__name__}: {error}"}
 
 
-def fetch_snapshot(token: str) -> Snapshot:
+def _download_photo(token: str, file_id: str, destination: Path) -> bool:
+    """Scarica una foto di gruppo in `destination`. → riuscito o no.
+
+    Due passi: `getFile` dà il percorso, poi il file si prende da
+    `/file/bot<token>/<percorso>`. Quell'URL **non** va in pagina: contiene il
+    token.
+    """
+    info = _call(token, "getFile", file_id=file_id)
+    if not info.get("ok"):
+        return False
+    path = info["result"].get("file_path")
+    if not path:
+        return False
+    url = f"{API}/file/bot{token}/{path}"
+    try:
+        with urllib.request.urlopen(url, timeout=30) as response:
+            data = response.read()
+    except Exception:
+        return False
+    if not data:
+        return False
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_bytes(data)
+    return True
+
+
+def fetch_snapshot(token: str, images_dir: Path | None = None) -> Snapshot:
     """Interroga Telegram gruppo per gruppo. Un errore non ferma gli altri."""
     groups = []
     for region, handle in REGION_TO_HANDLE.items():
@@ -154,6 +208,12 @@ def fetch_snapshot(token: str) -> Snapshot:
                 group.members = int(count["result"])
             else:
                 group.error = str(count.get("description"))
+            photo = chat["result"].get("photo") or {}
+            file_id = photo.get("small_file_id")
+            if images_dir is not None and file_id:
+                name = f"{group.slug}.jpg"
+                if _download_photo(token, file_id, images_dir / name):
+                    group.image = f"{IMAGES_DIR}/{name}"
         else:
             group.error = str(chat.get("description"))
         groups.append(group)
@@ -240,6 +300,20 @@ def active_topics() -> list[tuple[int, str]]:
     return sorted(topics, key=lambda item: item[1].lower())
 
 
+def _avatar(group: Group) -> str:
+    """La foto del gruppo, o un tondo con le iniziali se non c'è.
+
+    `alt` vuoto di proposito: il nome del gruppo sta nella riga accanto, e
+    farlo rileggere da uno screen reader sarebbe solo un doppione.
+    """
+    if group.image:
+        return (
+            f'<img class="avatar" src="{escape(group.image)}" alt=""'
+            f' width="{AVATAR_PX}" height="{AVATAR_PX}" loading="lazy">'
+        )
+    return f'<span class="avatar initials" aria-hidden="true">{escape(group.initials)}</span>'
+
+
 def render(snapshot: Snapshot) -> str:
     """Riempie `page_template.html`: una pagina sola, senza dipendenze esterne.
 
@@ -251,6 +325,7 @@ def render(snapshot: Snapshot) -> str:
     cards = "\n".join(
         f"""        <li class="group{' unknown' if g.band == BAND_UNKNOWN else ''}">
           <a href="{escape(g.url)}">
+            {_avatar(g)}
             <span class="name">{escape(g.display_title)}</span>
             <span class="handle">{escape(g.handle)}</span>
             <span class="count" title="iscritti">{escape(g.badge)}</span>
@@ -347,11 +422,12 @@ def main(argv: list[str] | None = None) -> int:
                 file=sys.stderr,
             )
             return 1
-        snapshot = fetch_snapshot(token)
+        snapshot = fetch_snapshot(token, images_dir=args.output.parent / IMAGES_DIR)
 
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(render(snapshot), encoding="utf-8")
-    print(f"{args.output}  ({len(snapshot.groups)} gruppi)")
+    with_photo = sum(1 for group in snapshot.groups if group.image)
+    print(f"{args.output}  ({len(snapshot.groups)} gruppi, {with_photo} con foto)")
 
     if not args.offline:
         args.stats.parent.mkdir(parents=True, exist_ok=True)

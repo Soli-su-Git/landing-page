@@ -204,3 +204,44 @@ def test_page_version_comes_from_its_own_changelog(tmp_path):
 def test_footer_carries_the_page_version(snapshot):
     html = build_page.render(snapshot)
     assert f"v{build_page.page_version()}," in html
+
+
+# -- le foto dei gruppi ---------------------------------------------------------
+
+
+def test_cards_show_the_group_photo(snapshot):
+    for group in snapshot.groups:
+        group.image = f"img/{group.slug}.jpg"
+    block = _groups_block(_body(build_page.render(snapshot)))
+    assert '<img class="avatar" src="img/soliabruzzo.jpg" alt=""' in block
+    assert 'loading="lazy"' in block
+    assert block.count("<img") == len(snapshot.groups)
+
+
+def test_a_group_without_a_photo_gets_its_initials(snapshot):
+    block = _groups_block(_body(build_page.render(snapshot)))  # nessuna image impostata
+    assert "<img" not in block
+    assert '<span class="avatar initials" aria-hidden="true">ER</span>' in block
+
+
+@pytest.mark.parametrize(
+    ("region", "expected"),
+    [
+        ("Emilia-Romagna", "ER"),
+        ("Valle d'Aosta", "VA"),
+        ("Friuli Venezia Giulia", "FV"),
+        ("Trentino-Alto Adige", "TA"),
+        ("Abruzzo", "A"),
+    ],
+)
+def test_initials(region, expected):
+    assert build_page.Group(region=region, handle="@x").initials == expected
+
+
+def test_the_page_never_carries_the_bot_token(snapshot):
+    """L'URL di scarico di Telegram contiene il token: in pagina non ci va."""
+    for group in snapshot.groups:
+        group.image = f"img/{group.slug}.jpg"
+    html = build_page.render(snapshot)
+    assert "/file/bot" not in html
+    assert "api.telegram.org" not in html
